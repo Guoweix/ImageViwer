@@ -49,8 +49,8 @@ private:
     void RenderImage();
     void ToggleFullscreen();
     void MinimizeWindow();
-    void OnFileOpened(const std::string& filename);
-    void OnFolderOpened(const std::string& foldername);
+    void OnFileOpened(const std::string& filepath);
+    void OnFolderOpened(const std::string& folderpath);
 
     // 图片相关方法
     bool LoadImage(const std::string& imagePath); // 可扩展为批量加载

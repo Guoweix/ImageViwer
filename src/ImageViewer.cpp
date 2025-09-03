@@ -1,6 +1,7 @@
 #include "ImageViewer.h"
 #include <iostream>
 #include <algorithm>
+#include <filesystem>
 
 ImageViewer::ImageViewer() 
     : window(nullptr), renderer(nullptr), isRunning(false), isFullscreen(false), hasOpenedFile(false), needsRedraw(true),
@@ -69,12 +70,12 @@ bool ImageViewer::Initialize(int width, int height) {
     }
     
     // 设置菜单栏回调
-    menuBar.SetOnFileOpened([this](const std::string& filename) {
-        OnFileOpened(filename);
+    menuBar.SetOnFileOpened([this](const std::string& filepath) {
+        OnFileOpened(filepath);
     });
-    
-    menuBar.SetOnFolderOpened([this](const std::string& foldername) {
-        OnFolderOpened(foldername);
+
+    menuBar.SetOnFolderOpened([this](const std::string& folderpath) {
+        OnFolderOpened(folderpath);
     });
     
     // 初始化缩放
@@ -210,10 +211,11 @@ void ImageViewer::Cleanup() {
 }
 
 void ImageViewer::OnFileOpened(const std::string& filename) {
+    ClearAllImages();
     std::cout << "File opened: " << filename << std::endl;
     if (LoadImage(filename)) {
         hasOpenedFile = true;
-        currentImageIndex = (int)images.size() - 1;
+        currentImageIndex = 0;
         // 获取文件名（不包含路径）
         size_t pos = filename.find_last_of("/\\");
         std::string displayName = (pos != std::string::npos) ? filename.substr(pos + 1) : filename;
@@ -228,11 +230,31 @@ void ImageViewer::OnFileOpened(const std::string& filename) {
     }
 }
 
-void ImageViewer::OnFolderOpened(const std::string& foldername) {
-    std::cout << "Folder opened: " << foldername << std::endl;
+void ImageViewer::OnFolderOpened(const std::string& folderpath) {
+    ClearAllImages(); // 先清除之前的图片
+    std::cout << "Folder opened: " << folderpath << std::endl;
     hasOpenedFile = true;
-    SDL_SetWindowTitle(window, ("Image Viewer - " + foldername).c_str());
+    SDL_SetWindowTitle(window, ("Image Viewer - " + folderpath).c_str());
     // TODO: 在这里添加浏览文件夹中图片的逻辑
+
+    //将图片添加到images
+    MarkForRedraw(); // 打开文件夹后标记重绘
+    //遍历folderpath下的图片文件，加载到images中
+    for (const auto& entry : std::filesystem::directory_iterator(folderpath)) {
+        if (entry.is_regular_file() && (entry.path().extension() == ".png"|| entry.path().extension() == ".jpg" || entry.path().extension() == ".jpeg" || entry.path().extension() == ".bmp" || entry.path().extension() == ".tif" || entry.path().extension() == ".tiff")) {
+            LoadImage(entry.path().string());
+        }
+    }
+
+    if (!images.empty()) {
+        currentImageIndex = 0;
+        FitImageToWindow();
+        CenterImage();
+    } else {
+        currentImageIndex = -1; // 没有图片
+    
+    }
+
 }
 
 void ImageViewer::RenderWelcomeScreen() {

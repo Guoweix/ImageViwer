@@ -91,10 +91,10 @@ std::string SimpleFileDialog::OpenFolder() {
     }
     
     // 如果都失败，回退到命令行输入
-    if (result.empty()) {
-        std::cout << "请输入文件夹路径: ";
-        std::getline(std::cin, result);
-    }
+    // if (result.empty()) {
+    //     std::cout << "请输入文件夹路径: ";
+    //     std::getline(std::cin, result);
+    // }
     
     return result;
 }

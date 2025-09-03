@@ -96,4 +96,6 @@ private:
     // 异步文件对话框
     std::future<std::string> openFileFuture;
     bool openFilePending = false;
+    std::future<std::string> openFolderFuture;
+    bool openFolderPending = false;
 };

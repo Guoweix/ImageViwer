@@ -5,6 +5,8 @@
 #include <memory>
 #include <array>
 #include <future>
+#include <filesystem>
+#include <algorithm>
 
 MenuBar::MenuBar() 
     : showDropdown(false), fontManager(nullptr), scaleFactor(1.0f), currentWindowWidth(800) {
@@ -139,6 +141,18 @@ void MenuBar::HandleEvent(const SDL_Event& event) {
             std::cout << "[DEBUG] No file selected" << std::endl;
         }
     }
+    if (openFolderPending && openFolderFuture.valid() && openFolderFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+        std::string foldername = openFolderFuture.get();
+        openFolderPending = false;
+        if (!foldername.empty()) {
+            std::cout << "[DEBUG] Folder selected: " << foldername << std::endl;
+            if (onFolderOpened) {
+                onFolderOpened(foldername);
+            }
+        } else {
+            std::cout << "[DEBUG] No folder selected" << std::endl;
+        }
+    }
 }
 
 void MenuBar::Render(SDL_Renderer* renderer) {
@@ -269,14 +283,11 @@ void MenuBar::OnOpenFile() {
 
 void MenuBar::OnOpenFolder() {
     std::cout << "[DEBUG] Open Folder clicked" << std::endl;
-    std::string foldername = OpenFolderDialog();
-    if (!foldername.empty()) {
-        std::cout << "[DEBUG] Folder selected: " << foldername << std::endl;
-        if (onFolderOpened) {
-            onFolderOpened(foldername);
-        }
-    } else {
-        std::cout << "[DEBUG] No folder selected" << std::endl;
+    if (!openFolderPending) {
+        openFolderFuture = std::async(std::launch::async, [](){
+            return SimpleFileDialog::OpenFolder();
+        });
+        openFolderPending = true;
     }
 }
 
