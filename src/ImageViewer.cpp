@@ -20,6 +20,9 @@ bool ImageViewer::Initialize(int width, int height) {
     lastWindowWidth = width;
     lastWindowHeight = height;
     
+    // 设置缩放插值方式为最近邻，避免图片缩放模糊
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
+    
     // 初始化SDL
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         std::cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << std::endl;
@@ -108,12 +111,10 @@ void ImageViewer::HandleEvents() {
     while (SDL_PollEvent(&e) != 0) {
         // 先让菜单栏处理事件
         menuBar.HandleEvent(e);
-        
         switch (e.type) {
             case SDL_QUIT:
                 isRunning = false;
                 break;
-                
             case SDL_KEYDOWN:
                 switch (e.key.keysym.sym) {
                     case SDLK_ESCAPE:
@@ -134,6 +135,24 @@ void ImageViewer::HandleEvents() {
                     case SDLK_q:
                         if (e.key.keysym.mod & KMOD_CTRL) {
                             isRunning = false;
+                        }
+                        break;
+                    case SDLK_LEFT:
+                        // 上一张
+                        if (images.size() > 1 && currentImageIndex > 0) {
+                            --currentImageIndex;
+                            FitImageToWindow();
+                            CenterImage();
+                            MarkForRedraw();
+                        }
+                        break;
+                    case SDLK_RIGHT:
+                        // 下一张
+                        if (images.size() > 1 && currentImageIndex < (int)images.size() - 1) {
+                            ++currentImageIndex;
+                            FitImageToWindow();
+                            CenterImage();
+                            MarkForRedraw();
                         }
                         break;
                 }
@@ -252,7 +271,6 @@ void ImageViewer::OnFolderOpened(const std::string& folderpath) {
         CenterImage();
     } else {
         currentImageIndex = -1; // 没有图片
-    
     }
 
 }
@@ -349,7 +367,7 @@ void ImageViewer::UpdateScaleFactor() {
     float widthScale = static_cast<float>(windowWidth) / 800.0f;
     float heightScale = static_cast<float>(windowHeight) / 600.0f;
     
-    // 取较小的缩放因子以保持比例
+    // 取较小的缩放比例以保持图片比例
     scaleFactor = std::min(widthScale, heightScale);
     
     // 限制缩放范围
@@ -422,7 +440,7 @@ void ImageViewer::FitImageToWindow() {
     // 计算缩放比例以适应窗口
     float scaleX = static_cast<float>(availableWidth) / static_cast<float>(imageWidth);
     float scaleY = static_cast<float>(availableHeight) / static_cast<float>(imageHeight);
-    // 选择较小的缩放比例以保持图片比例
+    // 选择较小的缩放比例以保持圖片比例
     imageScale = std::min(scaleX, scaleY);
     // 限制最小缩放比例
     imageScale = std::max(0.1f, imageScale);
