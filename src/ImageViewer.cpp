@@ -4,8 +4,9 @@
 
 ImageViewer::ImageViewer() 
     : window(nullptr), renderer(nullptr), isRunning(false), isFullscreen(false), hasOpenedFile(false), needsRedraw(true),
-      currentImage(nullptr), imageWidth(0), imageHeight(0), imageScale(1.0f), imageOffsetX(0), imageOffsetY(0),
-      scaleFactor(1.0f), windowWidth(800), windowHeight(600), lastWindowWidth(800), lastWindowHeight(600) {
+      imageScale(1.0f), imageOffsetX(0), imageOffsetY(0),
+      scaleFactor(1.0f), windowWidth(800), windowHeight(600), lastWindowWidth(800), lastWindowHeight(600),
+      currentImageIndex(-1) {
 }
 
 ImageViewer::~ImageViewer() {
@@ -167,7 +168,7 @@ void ImageViewer::Render() {
     }
     SDL_RenderClear(renderer);
     
-    if (hasOpenedFile && currentImage) {
+    if (hasOpenedFile && currentImageIndex >= 0 && currentImageIndex < (int)images.size() && images[currentImageIndex].texture) {
         // 渲染图片
         RenderImage();
     } else if (hasOpenedFile) {
@@ -184,10 +185,8 @@ void ImageViewer::Render() {
         // 显示欢迎界面
         RenderWelcomeScreen();
     }
-    
     // 最后渲染菜单栏，确保它在最上层
     menuBar.Render(renderer);
-    
     // 更新屏幕
     SDL_RenderPresent(renderer);
 }
@@ -212,16 +211,13 @@ void ImageViewer::Cleanup() {
 
 void ImageViewer::OnFileOpened(const std::string& filename) {
     std::cout << "File opened: " << filename << std::endl;
-    
     if (LoadImage(filename)) {
         hasOpenedFile = true;
-        currentImagePath = filename;
-        
+        currentImageIndex = (int)images.size() - 1;
         // 获取文件名（不包含路径）
         size_t pos = filename.find_last_of("/\\");
         std::string displayName = (pos != std::string::npos) ? filename.substr(pos + 1) : filename;
         SDL_SetWindowTitle(window, ("Image Viewer - " + displayName).c_str());
-        
         FitImageToWindow();
         CenterImage();
         MarkForRedraw(); // 加载新图片后标记重绘
@@ -319,7 +315,7 @@ void ImageViewer::HandleWindowResize(int newWidth, int newHeight) {
     menuBar.UpdateLayout(windowWidth, windowHeight);
     
     // 如果有图片，重新调整其位置和大小
-    if (currentImage) {
+    if (currentImageIndex >= 0 && currentImageIndex < (int)images.size()) {
         FitImageToWindow();
         CenterImage();
     }
@@ -341,93 +337,96 @@ void ImageViewer::UpdateScaleFactor() {
 }
 
 bool ImageViewer::LoadImage(const std::string& imagePath) {
-    // 清除之前的图片
-    ClearImage();
-    
     // 加载图片
     SDL_Surface* loadedSurface = IMG_Load(imagePath.c_str());
     if (loadedSurface == nullptr) {
         std::cerr << "Unable to load image " << imagePath << "! IMG_Error: " << IMG_GetError() << std::endl;
         return false;
     }
-    
     // 创建纹理
-    currentImage = SDL_CreateTextureFromSurface(renderer, loadedSurface);
-    if (currentImage == nullptr) {
+    SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer, loadedSurface);
+    if (tex == nullptr) {
         std::cerr << "Unable to create texture from " << imagePath << "! SDL_Error: " << SDL_GetError() << std::endl;
         SDL_FreeSurface(loadedSurface);
         return false;
     }
-    
     // 获取图片尺寸
-    imageWidth = loadedSurface->w;
-    imageHeight = loadedSurface->h;
-    
+    int w = loadedSurface->w;
+    int h = loadedSurface->h;
     // 释放表面
     SDL_FreeSurface(loadedSurface);
-    
-    std::cout << "Image loaded successfully: " << imageWidth << "x" << imageHeight << std::endl;
+    // 存入images
+    images.push_back({tex, w, h, imagePath});
+    std::cout << "Image loaded successfully: " << w << "x" << h << std::endl;
     return true;
 }
 
 void ImageViewer::ClearImage() {
-    if (currentImage) {
-        SDL_DestroyTexture(currentImage);
-        currentImage = nullptr;
+    if (currentImageIndex >= 0 && currentImageIndex < (int)images.size()) {
+        if (images[currentImageIndex].texture) {
+            SDL_DestroyTexture(images[currentImageIndex].texture);
+            images[currentImageIndex].texture = nullptr;
+        }
+        images.erase(images.begin() + currentImageIndex);
+        if (images.empty()) {
+            currentImageIndex = -1;
+        } else if (currentImageIndex >= (int)images.size()) {
+            currentImageIndex = (int)images.size() - 1;
+        }
     }
-    imageWidth = 0;
-    imageHeight = 0;
+    imageScale = 1.0f;
+    imageOffsetX = 0;
+    imageOffsetY = 0;
+}
+
+void ImageViewer::ClearAllImages() {
+    for (auto& img : images) {
+        if (img.texture) SDL_DestroyTexture(img.texture);
+    }
+    images.clear();
+    currentImageIndex = -1;
     imageScale = 1.0f;
     imageOffsetX = 0;
     imageOffsetY = 0;
 }
 
 void ImageViewer::FitImageToWindow() {
-    if (!currentImage) return;
-    
+    if (currentImageIndex < 0 || currentImageIndex >= (int)images.size() || !images[currentImageIndex].texture) return;
     int menuHeight = menuBar.GetHeight();
     int availableWidth = windowWidth;
     int availableHeight = windowHeight - menuHeight;
-    
+    int imageWidth = images[currentImageIndex].width;
+    int imageHeight = images[currentImageIndex].height;
     // 计算缩放比例以适应窗口
     float scaleX = static_cast<float>(availableWidth) / static_cast<float>(imageWidth);
     float scaleY = static_cast<float>(availableHeight) / static_cast<float>(imageHeight);
-    
     // 选择较小的缩放比例以保持图片比例
     imageScale = std::min(scaleX, scaleY);
-    
     // 限制最小缩放比例
     imageScale = std::max(0.1f, imageScale);
-    
     std::cout << "Image scale set to: " << imageScale << std::endl;
 }
 
 void ImageViewer::CenterImage() {
-    if (!currentImage) return;
-    
+    if (currentImageIndex < 0 || currentImageIndex >= (int)images.size() || !images[currentImageIndex].texture) return;
     int menuHeight = menuBar.GetHeight();
-    int scaledWidth = static_cast<int>(imageWidth * imageScale);
-    int scaledHeight = static_cast<int>(imageHeight * imageScale);
-    
+    int scaledWidth = static_cast<int>(images[currentImageIndex].width * imageScale);
+    int scaledHeight = static_cast<int>(images[currentImageIndex].height * imageScale);
     // 计算居中位置
     imageOffsetX = (windowWidth - scaledWidth) / 2;
     imageOffsetY = menuHeight + (windowHeight - menuHeight - scaledHeight) / 2;
-    
     std::cout << "Image centered at: " << imageOffsetX << ", " << imageOffsetY << std::endl;
 }
 
 void ImageViewer::RenderImage() {
-    if (!currentImage) return;
-    
-    int scaledWidth = static_cast<int>(imageWidth * imageScale);
-    int scaledHeight = static_cast<int>(imageHeight * imageScale);
-    
+    if (currentImageIndex < 0 || currentImageIndex >= (int)images.size() || !images[currentImageIndex].texture) return;
+    int scaledWidth = static_cast<int>(images[currentImageIndex].width * imageScale);
+    int scaledHeight = static_cast<int>(images[currentImageIndex].height * imageScale);
     SDL_Rect destRect = {
         imageOffsetX,
         imageOffsetY,
         scaledWidth,
         scaledHeight
     };
-    
-    SDL_RenderCopy(renderer, currentImage, nullptr, &destRect);
+    SDL_RenderCopy(renderer, images[currentImageIndex].texture, nullptr, &destRect);
 }

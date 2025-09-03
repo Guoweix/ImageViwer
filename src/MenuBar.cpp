@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <memory>
 #include <array>
+#include <future>
 
 MenuBar::MenuBar() 
     : showDropdown(false), fontManager(nullptr), scaleFactor(1.0f), currentWindowWidth(800) {
@@ -123,6 +124,20 @@ void MenuBar::HandleEvent(const SDL_Event& event) {
                 }
             }
             break;
+    }
+    
+    // 事件处理后，检查异步文件对话框是否完成
+    if (openFilePending && openFileFuture.valid() && openFileFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+        std::string filename = openFileFuture.get();
+        openFilePending = false;
+        if (!filename.empty()) {
+            std::cout << "[DEBUG] File selected: " << filename << std::endl;
+            if (onFileOpened) {
+                onFileOpened(filename);
+            }
+        } else {
+            std::cout << "[DEBUG] No file selected" << std::endl;
+        }
     }
 }
 
@@ -246,14 +261,9 @@ bool MenuBar::IsPointInRect(int x, int y, const SDL_Rect& rect) {
 
 void MenuBar::OnOpenFile() {
     std::cout << "[DEBUG] Open File clicked" << std::endl;
-    std::string filename = OpenFileDialog();
-    if (!filename.empty()) {
-        std::cout << "[DEBUG] File selected: " << filename << std::endl;
-        if (onFileOpened) {
-            onFileOpened(filename);
-        }
-    } else {
-        std::cout << "[DEBUG] No file selected" << std::endl;
+    if (!openFilePending) {
+        openFileFuture = SimpleFileDialog::OpenFileAsync();
+        openFilePending = true;
     }
 }
 
@@ -276,7 +286,8 @@ void MenuBar::OnOpenArchive() {
 }
 
 std::string MenuBar::OpenFileDialog() {
-    return SimpleFileDialog::OpenFile();
+    // 异步模式下不再直接调用
+    return std::string{};
 }
 
 std::string MenuBar::OpenFolderDialog() {

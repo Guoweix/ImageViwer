@@ -3,6 +3,7 @@
 #include <memory>
 #include <array>
 #include <cstdlib>
+#include <future>
 
 std::string SimpleFileDialog::OpenFile() {
     std::string result;
@@ -96,4 +97,16 @@ std::string SimpleFileDialog::OpenFolder() {
     }
     
     return result;
+}
+
+std::future<std::string> SimpleFileDialog::OpenFileAsync() {
+    return std::async(std::launch::async, []() {
+        return OpenFile();
+    });
+}
+
+std::future<std::string> SimpleFileDialog::OpenFolderAsync() {
+    return std::async(std::launch::async, []() {
+        return OpenFolder();
+    });
 }

@@ -5,6 +5,7 @@
 #include <string>
 #include <functional>
 #include <vector>
+#include <future>
 #include "FontManager.h"
 
 struct MenuItem {
@@ -91,4 +92,8 @@ private:
     // 系统文件对话框
     std::string OpenFileDialog();
     std::string OpenFolderDialog();
+
+    // 异步文件对话框
+    std::future<std::string> openFileFuture;
+    bool openFilePending = false;
 };
