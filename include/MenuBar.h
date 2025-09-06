@@ -39,6 +39,7 @@ public:
     // 设置回调函数
     void SetOnFileOpened(std::function<void(const std::string&)> callback);
     void SetOnFolderOpened(std::function<void(const std::string&)> callback);
+    void SetOnArchiveOpened(std::function<void(const std::string&)> callback);
     
     // 获取菜单栏高度（支持缩放）
     int GetHeight() const { return static_cast<int>(baseMenuHeight * scaleFactor); }
@@ -76,6 +77,7 @@ private:
     // 回调函数
     std::function<void(const std::string&)> onFileOpened;
     std::function<void(const std::string&)> onFolderOpened;
+    std::function<void(const std::string&)> onArchiveOpened;
     
     // 辅助函数
     void DrawMenuItem(SDL_Renderer* renderer, const MenuItem& item);
@@ -89,13 +91,12 @@ private:
     void OnOpenFolder();
     void OnOpenArchive();
     
-    // 系统文件对话框
-    std::string OpenFileDialog();
-    std::string OpenFolderDialog();
 
     // 异步文件对话框
     std::future<std::string> openFileFuture;
     bool openFilePending = false;
     std::future<std::string> openFolderFuture;
     bool openFolderPending = false;
+    std::future<std::string> openArchiveFuture;
+    bool openArchivePending = false;
 };

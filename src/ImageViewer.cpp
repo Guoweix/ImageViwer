@@ -80,7 +80,11 @@ bool ImageViewer::Initialize(int width, int height) {
     menuBar.SetOnFolderOpened([this](const std::string& folderpath) {
         OnFolderOpened(folderpath);
     });
-    
+
+    menuBar.SetOnArchiveOpened([this](const std::string& archivename) {
+        OnArchiveOpened(archivename);
+    });
+
     // 初始化缩放
     UpdateScaleFactor();
     menuBar.SetScaleFactor(scaleFactor);
@@ -469,4 +473,9 @@ void ImageViewer::RenderImage() {
         scaledHeight
     };
     SDL_RenderCopy(renderer, images[currentImageIndex].texture, nullptr, &destRect);
+}
+
+
+void ImageViewer::OnArchiveOpened(const std::string& archivename) {
+    std::cout << "Archive opened: " << archivename << std::endl;
 }

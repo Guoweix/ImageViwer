@@ -153,6 +153,20 @@ void MenuBar::HandleEvent(const SDL_Event& event) {
             std::cout << "[DEBUG] No folder selected" << std::endl;
         }
     }
+    if (openArchivePending && openArchiveFuture.valid() && openArchiveFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+        std::string archivename = openArchiveFuture.get();
+        openArchivePending = false;
+        if (!archivename.empty()) {
+            std::cout << "[DEBUG] Archive selected: " << archivename << std::endl;
+            if (onArchiveOpened) {
+                onArchiveOpened(archivename);
+            }
+        } else {
+            std::cout << "[DEBUG] No archive selected" << std::endl;
+        }
+    }
+
+    
 }
 
 void MenuBar::Render(SDL_Renderer* renderer) {
@@ -291,19 +305,8 @@ void MenuBar::OnOpenFolder() {
     }
 }
 
-void MenuBar::OnOpenArchive() {
-    std::cout << "[DEBUG] Open Archive clicked" << std::endl;
-    std::cout << "[DEBUG] Archive functionality not yet implemented" << std::endl;
-}
 
-std::string MenuBar::OpenFileDialog() {
-    // 异步模式下不再直接调用
-    return std::string{};
-}
 
-std::string MenuBar::OpenFolderDialog() {
-    return SimpleFileDialog::OpenFolder();
-}
 
 void MenuBar::SetOnFileOpened(std::function<void(const std::string&)> callback) {
     onFileOpened = callback;
@@ -345,3 +348,18 @@ void MenuBar::UpdateScaledSizes() {
     dropdownItemHeight = static_cast<int>(baseDropdownItemHeight * scaleFactor);
     dropdownWidth = static_cast<int>(baseDropdownWidth * scaleFactor);
 }
+
+
+void MenuBar::SetOnArchiveOpened(std::function<void(const std::string&)> callback) {
+    onArchiveOpened = callback;
+}
+
+
+void MenuBar::OnOpenArchive() {
+    std::cout << "[DEBUG] Open Archive clicked" << std::endl;
+    if (!openArchivePending) {
+        openArchiveFuture = SimpleFileDialog::OpenArchiveAsync();
+        openArchivePending = true;
+    }
+}
+

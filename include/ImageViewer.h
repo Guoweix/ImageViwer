@@ -51,6 +51,7 @@ private:
     void MinimizeWindow();
     void OnFileOpened(const std::string& filepath);
     void OnFolderOpened(const std::string& folderpath);
+    void OnArchiveOpened(const std::string& archivename); // 新增：处理打开归档文件
 
     // 图片相关方法
     bool LoadImage(const std::string& imagePath); // 可扩展为批量加载
