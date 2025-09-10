@@ -10,7 +10,7 @@ std::string SimpleFileDialog::OpenFile() {
     
     // 尝试使用zenity (GNOME)
     std::string command = "zenity --file-selection --title='Open Image File' "
-                         "--file-filter='Image Files | *.jpg *.jpeg *.png *.bmp *.gif *.tiff' "
+                         "--file-filter='Image Files | *.jpg *.jpeg *.png *.bmp *.gif *.tiff *.webp' "
                          "--file-filter='All Files | *' 2>/dev/null";
     
     std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.c_str(), "r"), pclose);

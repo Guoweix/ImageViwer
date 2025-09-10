@@ -266,7 +266,7 @@ void ImageViewer::OnFolderOpened(const std::string& folderpath) {
     MarkForRedraw(); // 打开文件夹后标记重绘
     //遍历folderpath下的图片文件，加载到images中
     for (const auto& entry : std::filesystem::directory_iterator(folderpath)) {
-        if (entry.is_regular_file() && (entry.path().extension() == ".png"|| entry.path().extension() == ".jpg" || entry.path().extension() == ".jpeg" || entry.path().extension() == ".bmp" || entry.path().extension() == ".tif" || entry.path().extension() == ".tiff")) {
+        if (entry.is_regular_file() && (entry.path().extension() == ".png"|| entry.path().extension() == ".jpg" || entry.path().extension() == ".jpeg" || entry.path().extension() == ".bmp" || entry.path().extension() == ".tif" || entry.path().extension() == ".tiff"||entry.path().extension() == ".webp")) {
             LoadImage(entry.path().string());
         }
     }
@@ -494,7 +494,7 @@ void ImageViewer::OnArchiveOpened(const std::string& archivename) {
             std::string name = archive_entry_pathname(entry);
             std::string ext = name.substr(name.find_last_of('.') + 1);
             std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-            if (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "bmp" || ext == "tif" || ext == "tiff") {
+            if (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "bmp" || ext == "tif" || ext == "tiff"|| ext == "webp") {
                 size_t size = archive_entry_size(entry);
                 if (size > 0) {
                     std::vector<char> buffer(size);
