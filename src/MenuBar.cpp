@@ -132,6 +132,7 @@ void MenuBar::HandleEvent(const SDL_Event& event) {
     if (openFilePending && openFileFuture.valid() && openFileFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
         std::string filename = openFileFuture.get();
         openFilePending = false;
+        isOpening = false;
         if (!filename.empty()) {
             std::cout << "[DEBUG] File selected: " << filename << std::endl;
             if (onFileOpened) {
@@ -144,6 +145,7 @@ void MenuBar::HandleEvent(const SDL_Event& event) {
     if (openFolderPending && openFolderFuture.valid() && openFolderFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
         std::string foldername = openFolderFuture.get();
         openFolderPending = false;
+        isOpening = false;
         if (!foldername.empty()) {
             std::cout << "[DEBUG] Folder selected: " << foldername << std::endl;
             if (onFolderOpened) {
@@ -156,6 +158,7 @@ void MenuBar::HandleEvent(const SDL_Event& event) {
     if (openArchivePending && openArchiveFuture.valid() && openArchiveFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
         std::string archivename = openArchiveFuture.get();
         openArchivePending = false;
+        isOpening = false;
         if (!archivename.empty()) {
             std::cout << "[DEBUG] Archive selected: " << archivename << std::endl;
             if (onArchiveOpened) {
@@ -289,7 +292,12 @@ bool MenuBar::IsPointInRect(int x, int y, const SDL_Rect& rect) {
 
 void MenuBar::OnOpenFile() {
     std::cout << "[DEBUG] Open File clicked" << std::endl;
+    if (isOpening) {
+        std::cout << "请等待当前操作完成！" << std::endl;
+        return;
+    }
     if (!openFilePending) {
+        isOpening = true;
         openFileFuture = SimpleFileDialog::OpenFileAsync();
         openFilePending = true;
     }
@@ -297,7 +305,12 @@ void MenuBar::OnOpenFile() {
 
 void MenuBar::OnOpenFolder() {
     std::cout << "[DEBUG] Open Folder clicked" << std::endl;
+    if (isOpening) {
+        std::cout << "请等待当前操作完成！" << std::endl;
+        return;
+    }
     if (!openFolderPending) {
+        isOpening = true;
         openFolderFuture = std::async(std::launch::async, [](){
             return SimpleFileDialog::OpenFolder();
         });
@@ -305,7 +318,22 @@ void MenuBar::OnOpenFolder() {
     }
 }
 
-
+void MenuBar::OnOpenArchive() {
+    std::cout << "[DEBUG] Open Archive clicked" << std::endl;
+    if (isOpening) {
+        std::cout << "请等待当前操作完成！" << std::endl;
+        return;
+    }
+    // 这里可按需实现异步归档打开
+    std::cout << "[DEBUG] Archive functionality not yet implemented" << std::endl;
+    if (!openArchivePending) {
+        isOpening = true;
+        openArchiveFuture = std::async(std::launch::async, [](){
+            return SimpleFileDialog::OpenArchive();
+        });
+        openArchivePending = true;
+    }
+}
 
 
 void MenuBar::SetOnFileOpened(std::function<void(const std::string&)> callback) {
@@ -352,14 +380,5 @@ void MenuBar::UpdateScaledSizes() {
 
 void MenuBar::SetOnArchiveOpened(std::function<void(const std::string&)> callback) {
     onArchiveOpened = callback;
-}
-
-
-void MenuBar::OnOpenArchive() {
-    std::cout << "[DEBUG] Open Archive clicked" << std::endl;
-    if (!openArchivePending) {
-        openArchiveFuture = SimpleFileDialog::OpenArchiveAsync();
-        openArchivePending = true;
-    }
 }
 

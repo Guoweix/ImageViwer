@@ -99,4 +99,5 @@ private:
     bool openFolderPending = false;
     std::future<std::string> openArchiveFuture;
     bool openArchivePending = false;
+    bool isOpening = false;
 };

@@ -2,6 +2,8 @@
 #include <iostream>
 #include <algorithm>
 #include <filesystem>
+#include <archive.h>
+#include <archive_entry.h>
 
 ImageViewer::ImageViewer() 
     : window(nullptr), renderer(nullptr), isRunning(false), isFullscreen(false), hasOpenedFile(false), needsRedraw(true),
@@ -477,5 +479,48 @@ void ImageViewer::RenderImage() {
 
 
 void ImageViewer::OnArchiveOpened(const std::string& archivename) {
+    ClearAllImages();
     std::cout << "Archive opened: " << archivename << std::endl;
+    hasOpenedFile = true;
+    SDL_SetWindowTitle(window, ("Image Viewer - " + archivename).c_str());
+    MarkForRedraw();
+
+    struct archive* a = archive_read_new();
+    archive_read_support_format_all(a);
+    archive_read_support_filter_all(a);
+    if (archive_read_open_filename(a, archivename.c_str(), 10240) == ARCHIVE_OK) {
+        struct archive_entry* entry;
+        while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
+            std::string name = archive_entry_pathname(entry);
+            std::string ext = name.substr(name.find_last_of('.') + 1);
+            std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+            if (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "bmp" || ext == "tif" || ext == "tiff") {
+                size_t size = archive_entry_size(entry);
+                if (size > 0) {
+                    std::vector<char> buffer(size);
+                    la_ssize_t read = archive_read_data(a, buffer.data(), size);
+                    if (read > 0) {
+                        SDL_RWops* rw = SDL_RWFromMem(buffer.data(), buffer.size());
+                        SDL_Surface* surface = IMG_Load_RW(rw, 1);
+                        if (surface) {
+                            SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer, surface);
+                            if (tex) {
+                                images.push_back({tex, surface->w, surface->h, name});
+                            }
+                            SDL_FreeSurface(surface);
+                        }
+                    }
+                }
+            }
+            archive_read_data_skip(a); // 跳过非图片或已处理文件
+        }
+    }
+    archive_read_free(a);
+    if (!images.empty()) {
+        currentImageIndex = 0;
+        FitImageToWindow();
+        CenterImage();
+    } else {
+        currentImageIndex = -1;
+    }
 }
