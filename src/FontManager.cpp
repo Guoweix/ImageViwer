@@ -160,8 +160,8 @@ SDL_Surface* FontManager::RenderText(const std::string& text, SDL_Color color, F
     if (!font) {
         return nullptr;
     }
-    
-    return TTF_RenderText_Solid(font, text.c_str(), color);
+    // 使用Blended模式获得平滑抗锯齿字体
+    return TTF_RenderText_Blended(font, text.c_str(), color);
 }
 
 SDL_Texture* FontManager::RenderTextTexture(SDL_Renderer* renderer, const std::string& text, SDL_Color color, FontSize size) {
