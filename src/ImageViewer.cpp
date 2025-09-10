@@ -22,8 +22,8 @@ bool ImageViewer::Initialize(int width, int height) {
     lastWindowWidth = width;
     lastWindowHeight = height;
     
-    // 设置缩放插值方式为最近邻，避免图片缩放模糊
-    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
+    // 设置缩放插值方式为线性，获得平滑缩放效果
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
     
     // 初始化SDL
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
